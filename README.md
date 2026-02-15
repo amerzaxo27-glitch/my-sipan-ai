@@ -1,2 +1,461 @@
 sudo apt update
 sudo apt install gh
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>دارستانا سێڤان - وەشانێ شاهانە</title>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <style>
+        :root {
+            --primary: #2ecc71;
+            --secondary: #e74c3c;
+            --accent: #f1c40f;
+            --bg: #0f172a;
+        }
+
+        body { 
+            margin: 0; font-family: 'Vazirmatn', sans-serif; 
+            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
+                        url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1200&q=80');
+            background-size: cover; background-attachment: fixed; background-position: center;
+            color: white; text-align: center; user-select: none; overflow-x: hidden; 
+        }
+
+        .player-avatar {
+            width: 28px; height: 28px; border-radius: 50%;
+            vertical-align: middle; margin-left: 8px;
+            border: 2px solid white; object-fit: cover; cursor: pointer;
+        }
+
+        .skin-default { color: white; text-shadow: none; }
+        .skin-gold { color: gold; text-shadow: 0 0 10px #ffcc00; font-weight: bold; }
+        .skin-fire { color: #ff4500; text-shadow: 0 0 10px #ff0000; animation: fireEffect 1s infinite alternate; }
+        .skin-neon { color: #00f2ff; text-shadow: 0 0 10px #00f2ff; }
+        .skin-royal { color: #9b59b6; text-shadow: 0 0 10px #8e44ad; font-style: italic; }
+
+        @keyframes fireEffect { from { opacity: 0.8; } to { opacity: 1; filter: brightness(1.3); } }
+
+        #shop-trigger {
+            position: fixed; top: 70px; left: 15px; z-index: 1002;
+            font-size: 35px; cursor: pointer; filter: drop-shadow(0 0 8px #2ecc71);
+            background: rgba(0,0,0,0.5); border-radius: 50%; width: 55px; height: 55px;
+            display: none; align-items: center; justify-content: center; border: 2px solid #2ecc71;
+        }
+
+        .shop-card { background: #1e293b; color: white; padding: 20px; border-radius: 25px; width: 90%; max-width: 350px; border: 3px solid #2ecc71; }
+        .skin-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); margin: 10px 0; padding: 12px; border-radius: 12px; }
+        .buy-btn { background: #2ecc71; border: none; color: white; padding: 5px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .buy-btn.owned { background: #7f8c8d; cursor: default; }
+
+        .map-stats-header {
+            position: fixed; top: 0; left: 0; width: 100%;
+            background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(10px);
+            display: none; justify-content: space-around; align-items: center;
+            padding: 15px 0; border-bottom: 3px solid var(--accent); z-index: 1001;
+        }
+        .map-stat-item {
+            display: flex; align-items: center;
+            background: rgba(255,255,255,0.1); padding: 5px 15px; border-radius: 15px;
+            font-weight: bold; font-size: 16px; border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        #leaderboard-trigger {
+            position: fixed; top: 70px; right: 15px; z-index: 1002;
+            font-size: 35px; cursor: pointer; filter: drop-shadow(0 0 8px gold);
+            background: rgba(0,0,0,0.5); border-radius: 50%; width: 55px; height: 55px;
+            display: none; align-items: center; justify-content: center; border: 2px solid gold;
+        }
+
+        .name-input-overlay {
+            position: fixed; inset: 0; background: var(--bg); z-index: 5000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .name-box { background: white; padding: 30px; border-radius: 25px; color: #333; width: 80%; max-width: 300px; }
+        .name-box input { width: 100%; padding: 12px; margin: 15px 0; border: 2px solid #ddd; border-radius: 10px; font-family: 'Vazirmatn'; text-align: center; font-size: 18px; }
+
+        .lb-card { background: #1e293b; color: white; padding: 15px; border-radius: 20px; width: 90%; max-width: 350px; border: 3px solid gold; }
+        .lb-row { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #334155; font-size: 14px; }
+        .gold-txt { color: gold; font-weight: bold; }
+
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-15px) rotate(-1deg); } 75% { transform: translateX(15px) rotate(1deg); } }
+        @keyframes success-pop { 0% { transform: scale(1); border-color: var(--primary); } 50% { transform: scale(1.1); border-color: #fff; box-shadow: 0 0 30px var(--primary); } 100% { transform: scale(1); border-color: var(--primary); } }
+        @keyframes time-up-zoom { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(0.5) rotate(10deg); opacity: 0; filter: grayscale(1) blur(5px); } }
+        @keyframes chest-wobble { 0%, 100% { transform: scale(1) rotate(0deg); } 25% { transform: scale(1.1) rotate(-8deg); } 75% { transform: scale(1.1) rotate(8deg); } }
+        @keyframes chest-open-pop { 0% { transform: scale(1.1); filter: brightness(1); } 50% { transform: scale(1.6); filter: brightness(2); } 100% { transform: scale(0); opacity: 0; } }
+
+        .animate-fail { animation: shake 0.4s ease-in-out; border: 8px solid var(--secondary) !important; }
+        .animate-success { animation: success-pop 0.4s ease; }
+        .animate-timeout { animation: time-up-zoom 1s forwards; }
+        .chest-opening { animation: chest-open-pop 0.6s forwards !important; }
+
+        .header { 
+            background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(15px); padding: 15px; 
+            display: none; justify-content: space-around; align-items: center; 
+            position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; 
+            border-bottom: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .stat-box { background: rgba(0,0,0,0.5); padding: 8px 18px; border-radius: 20px; font-weight: bold; border: 1px solid var(--accent); }
+        #timer.timer-green { border-color: #2ecc71; color: #2ecc71; }
+        #timer.timer-yellow { border-color: #f1c40f; color: #f1c40f; }
+        #timer.timer-red { border-color: #e74c3c; color: #e74c3c; animation: pulse 0.5s infinite alternate; }
+
+        @keyframes pulse { from { opacity: 1; } to { opacity: 0.5; } }
+
+        #mute-btn {
+            position: fixed; top: 140px; left: 20px; z-index: 5000; 
+            background: rgba(0,0,0,0.5); border: 2px solid white; 
+            border-radius: 50%; width: 45px; height: 45px; color: white; cursor: pointer;
+        }
+
+        #map-screen { display: flex; flex-direction: column-reverse; align-items: center; padding: 150px 20px; gap: 30px; overflow-y: auto; height: 100vh; }
+        .level-node { 
+            width: 85px; height: 85px; background: rgba(51, 65, 85, 0.9); border: 4px solid #475569; 
+            border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            font-size: 20px; font-weight: bold; position: relative; transition: 0.3s; flex-shrink: 0;
+        }
+
+        .level-node.unlocked { background: radial-gradient(circle at 30% 30%, #ff5e5e, #b30000); border-color: white; cursor: pointer; }
+        .level-node b::before { content: "قوناغا "; font-size: 10px; display: block; opacity: 0.8; }
+        .stars-display { position: absolute; top: -25px; font-size: 16px; color: var(--accent); width: 80px; text-shadow: 0 0 5px black; }
+
+        .chest-wrapper { width: 100%; display: flex; justify-content: center; padding: 10px 0; }
+        .chest-node {
+            width: 75px; height: 75px; background-image: url('https://img.icons8.com/color/96/treasure-chest.png');
+            background-size: contain; background-repeat: no-repeat; cursor: pointer;
+            animation: chest-wobble 2s infinite ease-in-out; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.4));
+            transition: all 0.3s;
+        }
+
+        #game-screen { display:none; padding-top:160px; animation: fadeIn 0.5s; }
+        .card { 
+            background: rgba(255, 255, 255, 0.95); color: #1e293b; width: 85%; max-width: 380px; 
+            padding: 30px 10px; border-radius: 40px; border: 8px solid var(--primary); margin: auto;
+            transition: transform 0.2s, border 0.2s;
+        }
+
+        #math-display { font-size: 55px; font-weight: 800; color: #0f172a; margin: 15px 0; }
+        .ans-btn { background: linear-gradient(145deg, #f1c40f, #d4ac0d); border: none; height: 80px; border-radius: 20px; font-size: 30px; font-weight: bold; box-shadow: 0 6px 0 #b7950b; cursor: pointer; }
+        .ans-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #b7950b; }
+
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.95); z-index: 3000; align-items: center; justify-content: center; }
+        .modal-content { background: white; color: #333; padding: 30px; border-radius: 35px; width: 85%; max-width: 320px; border: 8px solid var(--accent); }
+        .fail-modal { border-color: var(--secondary) !important; }
+
+        #start-screen { position: fixed; inset: 0; background: linear-gradient(135deg, #2ecc71 0%, #1b4d3e 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <input type="file" id="avatar-upload" accept="image/*" style="display:none" onchange="processAvatar(this)">
+
+    <div id="name-overlay" class="name-input-overlay">
+        <div class="name-box">
+            <h2 style="margin:0">خێر هاتی! 🍎</h2>
+            <p>ناڤێ خۆ بنڤیسە دا دەستپێبکەین:</p>
+            <input type="text" id="user-name-input" placeholder="ناڤێ تە چییە؟" maxlength="15">
+            <button onclick="savePlayerName()" style="width:100%; padding:12px; background:var(--primary); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">پاشکەفتن و دەستپێکرن</button>
+        </div>
+    </div>
+
+    <div id="leaderboard-trigger" onclick="showOnlineLeaderboard()">🏆</div>
+    <div id="shop-trigger" onclick="openShop()">🛒</div>
+
+    <div id="map-header" class="map-stats-header">
+        <div class="map-stat-item" id="player-name-display">👤 مێڤان</div>
+        <div class="map-stat-item" id="total-stars-txt">⭐ ٠</div>
+        <div class="map-stat-item" id="total-coins-map-txt">💰 ٠</div>
+    </div>
+
+    <button id="mute-btn" onclick="toggleMusic()">🔊</button>
+
+    <div id="start-screen">
+        <div style="font-size: 70px;">🍎</div>
+        <h1 style="color: #fff; font-size: 40px; margin: 10px 0;">دارستانا سێڤان</h1>
+        <div id="total-coins-start" style="margin-bottom: 25px; font-size: 24px; background: rgba(0,0,0,0.3); padding: 10px 30px; border-radius: 25px; border: 1px solid var(--accent);">💰 ٠</div>
+        <button style="padding: 15px 50px; font-size: 24px; border-radius: 40px; cursor:pointer; background:white; color:#1b4d3e; border:none; font-weight:900;" onclick="goToMap()">دەستپێبکە 🚀</button>
+    </div>
+
+    <div class="header" id="game-header">
+        <div class="stat-box" id="q-count">١/١٠</div>
+        <div id="lives-display">❤️❤️❤️</div>
+        <div class="stat-box" id="coin-txt">💰 ٠</div>
+        <div class="stat-box" id="timer">⏰ ٦٠</div>
+    </div>
+
+    <div id="map-screen"></div>
+
+    <div id="lb-modal" class="modal-overlay" onclick="closeLeaderboard()">
+        <div class="lb-card" onclick="event.stopPropagation()">
+            <h2 style="color:gold; margin-top:0">🏆 ١٠ قارەمانێن زێڕین</h2>
+            <div id="lb-content"></div>
+            <button onclick="closeLeaderboard()" style="margin-top:15px; width:100%; padding:10px; background:gold; border:none; border-radius:10px; font-weight:bold;">قەپاتکرن</button>
+        </div>
+    </div>
+
+    <div id="shop-modal" class="modal-overlay" onclick="closeShop()">
+        <div class="shop-card" onclick="event.stopPropagation()">
+            <h2 style="color:#2ecc71; margin-top:0">🛒 دوکانا ستایلان</h2>
+            <p>ستایلێ ناڤێ خۆ بگوهۆڕە:</p>
+            <div id="shop-items-list"></div>
+            <button onclick="closeShop()" style="margin-top:15px; width:100%; padding:10px; background:#e74c3c; color:white; border:none; border-radius:10px; font-weight:bold;">قەپاتکرن</button>
+        </div>
+    </div>
+
+    <div id="game-screen">
+        <div class="card" id="main-card">
+            <div id="level-info" style="font-weight:bold; color:#64748b;">قوناغا ١</div>
+            <div id="math-display">?</div>
+        </div>
+        <div id="answer-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 90%; max-width: 400px; margin: 30px auto;">
+            <button class="ans-btn" data-value="" onclick="handleTap(this)"></button>
+            <button class="ans-btn" data-value="" onclick="handleTap(this)"></button>
+            <button class="ans-btn" data-value="" onclick="handleTap(this)"></button>
+            <button class="ans-btn" data-value="" onclick="handleTap(this)"></button>
+        </div>
+        <button id="hint-btn" style="background:#9b59b6; color:white; border:none; padding:12px 25px; border-radius:15px; font-weight:bold; cursor:pointer;" onclick="useHint()">🌟 سێڤا زێڕین (٢٠ 💰)</button>
+    </div>
+
+    <div id="win-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h1 style="color: var(--primary); font-size: 28px; margin-top:0;">پیرۆزە!</h1>
+            <div id="modal-stars" style="font-size: 40px; margin: 15px 0;">⭐⭐⭐</div>
+            <p id="modal-reward" style="font-size: 24px; font-weight: bold; color:#27ae60;">+٥٠ 💰</p>
+            <button onclick="closeModals()" style="padding: 15px; width: 100%; border-radius: 20px; border: none; background: var(--primary); color: white; font-weight: 900; cursor: pointer; font-size: 18px;">بەردەوام بە</button>
+        </div>
+    </div>
+
+    <div id="fail-modal" class="modal-overlay">
+        <div class="modal-content fail-modal">
+            <div style="font-size: 60px; margin-bottom: 10px;">💥</div>
+            <h1 style="color: var(--secondary); font-size: 28px; margin-top:0;">تو خوسارەت بی!</h1>
+            <p id="fail-msg" style="font-size: 18px; color:#555; margin-bottom: 25px; font-weight:bold;">دووبارە هەول بدە دا ببیە قارەمان.</p>
+            <button onclick="closeModals()" style="padding: 15px; width: 100%; border-radius: 20px; border: none; background: var(--secondary); color: white; font-weight: 900; cursor: pointer; font-size: 18px;">دووبارە دەستپێبکە</button>
+        </div>
+    </div>
+
+    <script>
+        const skins = [
+            { id: 'skin-default', name: 'سادە', cost: 0, class: 'skin-default' },
+            { id: 'skin-gold', name: 'زێڕین', cost: 100, class: 'skin-gold' },
+            { id: 'skin-fire', name: 'ئاگرین', cost: 250, class: 'skin-fire' },
+            { id: 'skin-neon', name: 'بروسک', cost: 500, class: 'skin-neon' },
+            { id: 'skin-royal', name: 'شاهانە', cost: 1000, class: 'skin-royal' }
+        ];
+        let ownedSkins = JSON.parse(localStorage.getItem('ownedSkins')) || ['skin-default'];
+        let activeSkin = localStorage.getItem('activeSkin') || 'skin-default';
+        let playerName = localStorage.getItem('playerName') || "";
+        let playerAvatar = localStorage.getItem('playerAvatar') || "https://img.icons8.com/fluency/48/user-male-circle.png"; 
+        let unlockedLevel = parseInt(localStorage.getItem('unlockedLevel')) || 1;
+        let levelStars = JSON.parse(localStorage.getItem('levelStars')) || {}; 
+        let totalCoins = parseInt(localStorage.getItem('totalCoins')) || 0;
+        let openedChests = JSON.parse(localStorage.getItem('openedChests')) || [];
+        let questionsDone = 0, mistakes = 0, timeLeft = 60, timer = null, correctAnswer = 0, lives = 3, currentLvl = 1, isMuted = false;
+
+        const sfxCorrect = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
+        const sfxWrong = new Audio('https://assets.mixkit.co/active_storage/sfx/2103/2103-preview.mp3');
+        const sfxChest = new Audio('https://assets.mixkit.co/active_storage/sfx/2017/2017-preview.mp3');
+        const bgMusic = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-17.mp3');
+        bgMusic.loop = true; bgMusic.volume = 0.2;
+
+        const onlinePlayers = [
+            { name: "ئاراز دهۆکی", coins: 25400 }, { name: "شێرزاد یوسف", coins: 21200 },
+            { name: "رێبین ئامێدی", coins: 18900 }, { name: "دیار بارزانی", coins: 15600 },
+            { name: "سەفین زاخۆیی", coins: 12400 }, { name: "هێمن هەکاری", coins: 9800 },
+            { name: "بژار مێڤان", coins: 7500 }, { name: "ئالان کوردی", coins: 5200 },
+            { name: "نێچیروان", coins: 3400 }, { name: "هەڤال دهۆکی", coins: 1200 }
+        ];
+
+        window.onload = () => {
+            if (!playerName) document.getElementById('name-overlay').style.display = 'flex';
+            else { document.getElementById('name-overlay').style.display = 'none'; applySkin(); }
+            updateCoinUI();
+        };
+
+        function savePlayerName() {
+            let val = document.getElementById('user-name-input').value.trim();
+            if (val.length < 3) { alert("کێمتر نەبیت ژ ٣ پیتان!"); return; }
+            playerName = val; localStorage.setItem('playerName', playerName);
+            document.getElementById('name-overlay').style.display = 'none'; applySkin();
+        }
+
+        function triggerAvatar() { document.getElementById('avatar-upload').click(); }
+        function processAvatar(input) {
+            if (input.files && input.files[0]) {
+                let reader = new FileReader();
+                reader.onload = function(e) { playerAvatar = e.target.result; localStorage.setItem('playerAvatar', playerAvatar); applySkin(); };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function openShop() { document.getElementById('shop-modal').style.display = 'flex'; renderShop(); }
+        function closeShop() { document.getElementById('shop-modal').style.display = 'none'; }
+
+        function renderShop() {
+            const list = document.getElementById('shop-items-list'); list.innerHTML = "";
+            skins.forEach(s => {
+                const isOwned = ownedSkins.includes(s.id);
+                list.innerHTML += `<div class="skin-item"><span class="${s.class}">${s.name}</span><button class="buy-btn ${isOwned ? 'owned' : ''}" onclick="buySkin('${s.id}', ${s.cost})">${isOwned ? (activeSkin === s.id ? 'چالاکە' : 'دیارکرن') : toKurdishNum(s.cost) + ' 💰'}</button></div>`;
+            });
+        }
+
+        function buySkin(id, cost) {
+            if (ownedSkins.includes(id)) { activeSkin = id; localStorage.setItem('activeSkin', activeSkin); applySkin(); renderShop(); return; }
+            if (totalCoins >= cost) { totalCoins -= cost; ownedSkins.push(id); activeSkin = id; localStorage.setItem('ownedSkins', JSON.stringify(ownedSkins)); localStorage.setItem('activeSkin', activeSkin); updateCoinUI(); applySkin(); renderShop(); alert("✨ پیرۆزە!"); }
+            else alert("💰 پارەیێ تە تێرا ناکەت!");
+        }
+
+        function applySkin() {
+            const display = document.getElementById('player-name-display');
+            const skinClass = skins.find(s => s.id === activeSkin).class;
+            display.className = "map-stat-item " + skinClass;
+            display.innerHTML = `<img src="${playerAvatar}" class="player-avatar" onclick="triggerAvatar()"> ${playerName}`;
+        }
+
+        function showOnlineLeaderboard() {
+            document.getElementById('mute-btn').style.display = 'none';
+            let content = document.getElementById('lb-content'); content.innerHTML = "";
+            let all = [...onlinePlayers, { name: playerName + " (تۆ)", coins: totalCoins }].sort((a, b) => b.coins - a.coins);
+            all.slice(0, 10).forEach((p, i) => { content.innerHTML += `<div class="lb-row ${p.name.includes("(تۆ)") ? 'gold-txt' : ''}"><span>${toKurdishNum(i+1)}. ${p.name}</span><span>💰 ${toKurdishNum(p.coins)}</span></div>`; });
+            document.getElementById('lb-modal').style.display = 'flex';
+        }
+
+        function closeLeaderboard() { document.getElementById('lb-modal').style.display = 'none'; document.getElementById('mute-btn').style.display = 'block'; }
+        function toKurdishNum(num) { return num.toString().replace(/\d/g, x => ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'][x]); }
+        function toggleMusic() { const btn = document.getElementById('mute-btn'); if (isMuted) { bgMusic.play(); btn.innerText = "🔊"; isMuted = false; } else { bgMusic.pause(); btn.innerText = "🔇"; isMuted = true; } }
+
+        function goToMap() {
+            if(!isMuted) bgMusic.play().catch(() => {});
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'none';
+            document.getElementById('game-header').style.display = 'none';
+            document.getElementById('map-header').style.display = 'flex';
+            document.getElementById('leaderboard-trigger').style.display = 'flex';
+            document.getElementById('shop-trigger').style.display = 'flex';
+            document.getElementById('map-screen').style.display = 'flex';
+            renderMap(); updateTotalStars();
+        }
+
+        function renderMap() {
+            const map = document.getElementById('map-screen'); map.innerHTML = "";
+            for(let i=1; i<=100; i++) {
+                let node = document.createElement('div');
+                node.className = i <= unlockedLevel ? 'level-node unlocked' : 'level-node locked';
+                node.innerHTML = `<div class="stars-display">${levelStars[i] || ""}</div><b>${toKurdishNum(i)}</b>`;
+                if(i <= unlockedLevel) node.onclick = () => startLevel(i);
+                map.appendChild(node);
+                if (i % 10 === 0) {
+                    let wrapper = document.createElement('div'); wrapper.className = 'chest-wrapper';
+                    let chest = document.createElement('div'); chest.className = 'chest-node';
+                    if (i < unlockedLevel) { if(openedChests.includes(i)) { chest.style.filter = "brightness(0.5) grayscale(1)"; chest.style.animation = "none"; } else { chest.onclick = (e) => { e.stopPropagation(); openChest(i, e.target); }; } }
+                    else { chest.style.filter = "grayscale(1) opacity(0.3)"; chest.style.animation = "none"; chest.onclick = (e) => { e.stopPropagation(); alert("🔒 قوناغا " + toKurdishNum(i) + " ببۆڕینە!"); }; }
+                    wrapper.appendChild(chest); map.appendChild(wrapper);
+                }
+            }
+        }
+
+        function updateTotalStars() {
+            let total = 0; for (let lvl in levelStars) total += (levelStars[lvl].match(/⭐/g) || []).length;
+            document.getElementById('total-stars-txt').innerText = "⭐ " + toKurdishNum(total);
+        }
+
+        function startLevel(lvl) {
+            currentLvl = lvl; questionsDone = 0; mistakes = 0; lives = 3; timeLeft = 60;
+            document.getElementById('map-header').style.display = 'none';
+            document.getElementById('leaderboard-trigger').style.display = 'none';
+            document.getElementById('shop-trigger').style.display = 'none';
+            document.getElementById('level-info').innerText = "قوناغا " + toKurdishNum(lvl);
+            document.getElementById('q-count').innerText = toKurdishNum(1) + "/١٠";
+            document.getElementById('lives-display').innerText = "❤️❤️❤️";
+            updateTimerDisplay(); document.getElementById('map-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'block';
+            document.getElementById('game-header').style.display = 'flex';
+            generateQuestion(); startTimer();
+        }
+
+        function updateTimerDisplay() {
+            const timerEl = document.getElementById('timer'); timerEl.innerText = "⏰ " + toKurdishNum(timeLeft);
+            timerEl.classList.remove('timer-green', 'timer-yellow', 'timer-red');
+            if (timeLeft > 30) timerEl.classList.add('timer-green');
+            else if (timeLeft > 10) timerEl.classList.add('timer-yellow');
+            else timerEl.classList.add('timer-red');
+        }
+
+        function generateQuestion() {
+            document.getElementById('hint-btn').disabled = false;
+            let n1, n2, op;
+            if (currentLvl <= 10) { op = "+"; n1 = r(1, 15); n2 = r(1, 15); correctAnswer = n1 + n2; } 
+            else if (currentLvl <= 20) { op = "-"; n1 = r(15, 30); n2 = r(1, 15); correctAnswer = n1 - n2; }
+            else if (currentLvl <= 40) { op = "×"; n1 = r(2, 10); n2 = r(2, 9); correctAnswer = n1 * n2; }
+            else if (currentLvl <= 60) { op = "÷"; n2 = r(2, 9); correctAnswer = r(2, 10); n1 = n2 * correctAnswer; }
+            else { op = ["+", "-", "×", "÷"][r(0, 3)]; if(op==="+"){n1=r(20,150);n2=r(20,150);correctAnswer=n1+n2;} else if(op==="-"){n1=r(50,200);n2=r(10,50);correctAnswer=n1-n2;} else if(op==="×"){n1=r(5,15);n2=r(5,12);correctAnswer=n1*n2;} else {n2=r(2,12);correctAnswer=r(2,20);n1=n2*correctAnswer;} }
+            document.getElementById('math-display').innerText = `${toKurdishNum(n1)} ${op} ${toKurdishNum(n2)}`;
+            setupButtons();
+        }
+
+        function r(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+        function setupButtons() {
+            let btns = document.querySelectorAll('.ans-btn'); let options = [correctAnswer];
+            while(options.length < 4) { let w = correctAnswer + r(-15, 20); if(w !== correctAnswer && !options.includes(w) && w >= 0) options.push(w); }
+            options.sort(() => Math.random() - 0.5);
+            btns.forEach((b, i) => { b.setAttribute('data-value', options[i]); b.innerText = toKurdishNum(options[i]); b.style.visibility = "visible"; b.style.opacity = "1"; });
+        }
+
+        function handleTap(btn) {
+            let val = parseInt(btn.getAttribute('data-value')); const card = document.getElementById('main-card');
+            if(val === correctAnswer) {
+                card.classList.remove('animate-success', 'animate-fail'); void card.offsetWidth; card.classList.add('animate-success');
+                sfxCorrect.play(); questionsDone++;
+                if (questionsDone >= 10) { clearInterval(timer); setTimeout(() => { confetti(); showWinModal(); }, 400); }
+                else { setTimeout(() => { document.getElementById('q-count').innerText = `${toKurdishNum(questionsDone + 1)}/١٠`; generateQuestion(); card.classList.remove('animate-success'); }, 400); }
+            } else {
+                card.classList.remove('animate-success', 'animate-fail'); void card.offsetWidth; card.classList.add('animate-fail');
+                sfxWrong.play(); mistakes++; lives--; document.getElementById('lives-display').innerText = "❤️".repeat(Math.max(0, lives)) + "🖤".repeat(Math.max(0, 3-lives));
+                if(lives <= 0) showFailModal("دلەکەت تمام بوون!"); else setTimeout(() => card.classList.remove('animate-fail'), 400);
+            }
+        }
+
+        function startTimer() { if(timer) clearInterval(timer); timer = setInterval(() => { timeLeft--; updateTimerDisplay(); if(timeLeft <= 0) showFailModal("وەخت تمام بوو!"); }, 1000); }
+        function showFailModal(msg) { clearInterval(timer); document.getElementById('game-screen').style.display = 'none'; document.getElementById('fail-msg').innerText = msg; document.getElementById('fail-modal').style.display = 'flex'; }
+
+        function showWinModal() {
+            document.getElementById('game-screen').style.display = 'none';
+            let stars = mistakes === 0 ? "⭐⭐⭐" : (mistakes === 1 ? "⭐⭐" : "⭐");
+            let winCoins = (mistakes === 0 ? 50 : 20); totalCoins += winCoins; levelStars[currentLvl] = stars;
+            if (currentLvl === unlockedLevel) unlockedLevel++;
+            document.getElementById('modal-stars').innerText = stars; document.getElementById('modal-reward').innerText = "+" + toKurdishNum(winCoins) + " 💰";
+            document.getElementById('win-modal').style.display = 'flex'; updateCoinUI(); saveData();
+        }
+
+        function closeModals() { document.getElementById('win-modal').style.display = 'none'; document.getElementById('fail-modal').style.display = 'none'; goToMap(); }
+        function saveData() { localStorage.setItem('totalCoins', totalCoins); localStorage.setItem('unlockedLevel', unlockedLevel); localStorage.setItem('levelStars', JSON.stringify(levelStars)); localStorage.setItem('openedChests', JSON.stringify(openedChests)); }
+
+        function openChest(lvl, targetElement) {
+            if (openedChests.includes(lvl)) return;
+            sfxChest.play(); targetElement.classList.add('chest-opening');
+            setTimeout(() => { totalCoins += 100; openedChests.push(lvl); updateCoinUI(); saveData(); confetti(); alert("🎁 تە ١٠٠ 💰 وەرگرتن!"); renderMap(); updateTotalStars(); }, 600);
+        }
+
+        function useHint() {
+            if (totalCoins >= 20) {
+                totalCoins -= 20; updateCoinUI(); saveData(); document.getElementById('hint-btn').disabled = true;
+                let btns = Array.from(document.querySelectorAll('.ans-btn')).filter(b => parseInt(b.getAttribute('data-value')) !== correctAnswer);
+                btns.sort(() => Math.random() - 0.5); for (let i = 0; i < 2; i++) if (btns[i]) btns[i].style.visibility = "hidden";
+            } else alert("کیسکێ تە یێ بەتاڵە!");
+        }
+        
+        function updateCoinUI() {
+            let c = toKurdishNum(totalCoins);
+            document.getElementById('coin-txt').innerText = "💰 " + c;
+            document.getElementById('total-coins-start').innerText = "💰 " + c;
+            document.getElementById('total-coins-map-txt').innerText = "💰 " + c;
+        }
+    </script>
+</body>
+</html>
